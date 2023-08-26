@@ -187,11 +187,14 @@ model Vote {
   submissionId     Int?
   sharedSolution   SharedSolution? @relation(fields: [sharedSolutionId], references: [id])
   sharedSolutionId Int?
+  comment          Comment?        @relation(fields: [commentId], references: [id])
+  commentId        Int?
 
   @@index([userId])
   @@index([challengeId])
   @@index([submissionId])
   @@index([sharedSolutionId])
+  @@index([commentId])
 }
 
 /// This is a public solution created by a user for a challenge
@@ -333,6 +336,8 @@ model Comment {
   rootSolutionId Int?
   rootSolution   SharedSolution? @relation(fields: [rootSolutionId], references: [id])
   Report         Report[]        @relation("report_comment")
+
+  vote           Vote[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

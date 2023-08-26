@@ -5,10 +5,14 @@ import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, ChevronUp, Pencil, Reply, Share, Trash2 } from '@repo/ui/icons';
 import { useSession } from '@repo/auth/react';
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import clsx from 'clsx';
+import { debounce } from 'lodash';
 import { Tooltip, TooltipContent, TooltipTrigger, toast, UserBadge } from '@repo/ui';
 import Link from 'next/link';
+import { ThumbUpvoteButton } from '../upvote-thumb';
+import { incrementOrDecrementUpvoteForComment } from '../increment.action';
 import { CommentInput } from './comment-input';
 import { replyComment, updateComment, type CommentsByChallengeId } from './comment.action';
 import { CommentDeleteDialog } from './delete';
@@ -170,9 +174,12 @@ function SingleComment({
   queryKey,
   replyQueryKey,
 }: SingleCommentProps) {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [text, setText] = useState(comment.text);
   const [isEditing, setIsEditing] = useState(false);
+  const [votes, setVotes] = useState(comment._count.vote);
+  const [hasVoted, setHasVoted] = useState(comment.vote?.length > 0);
 
   async function updateChallengeComment() {
     try {
@@ -198,6 +205,17 @@ function SingleComment({
       });
     }
   }
+
+  const debouncedUpvote = useRef(
+    debounce(async (challengeId: number, userId: string, shouldIncrement: boolean) => {
+      const votes = await incrementOrDecrementUpvoteForComment(challengeId, userId, shouldIncrement);
+      if (votes !== undefined && votes !== null) {
+        setVotes(votes);
+      }
+
+      router.refresh();
+    }, 500),
+  ).current;
 
   async function copyPathNotifyUser() {
     try {
@@ -244,6 +262,19 @@ function SingleComment({
         <div className="my-auto flex items-center gap-4">
           {!readonly && (
             <>
+              <ThumbUpvoteButton
+                votes={votes}
+                hasVoted={hasVoted}
+                onClick={(shouldIncrement) => {
+                  setHasVoted(shouldIncrement);
+                  setVotes((v) => v + (shouldIncrement ? 1 : -1))
+                  debouncedUpvote(comment.id, loggedinUser.data?.user.id!, shouldIncrement)?.catch(
+                    (e) => {
+                      console.error(e);
+                    },
+                  );
+                }}
+              />
               <Reply className="absolute -left-6 h-4 w-4 opacity-50" />
               <div
                 className="flex cursor-pointer items-center gap-1 text-neutral-500 duration-200 hover:text-neutral-400 dark:text-neutral-400 dark:hover:text-neutral-300"

@@ -1,7 +1,7 @@
 'use server';
 import { prisma } from '@repo/db';
 
-export async function incrementOrDecrementUpvote(
+export async function incrementOrDecrementUpvoteForChallenge(
   challengeId: number,
   userId: string,
   shouldIncrement: boolean,
@@ -39,3 +39,44 @@ export async function incrementOrDecrementUpvote(
 
   return count?._count.vote;
 }
+
+export async function incrementOrDecrementUpvoteForComment(
+  commentId: number,
+  userId: string,
+  shouldIncrement: boolean,
+) {
+  const voteExists = await prisma.vote.findFirst({
+    where: {
+      commentId,
+      userId,
+    },
+  });
+
+  if (!voteExists && shouldIncrement) {
+    await prisma.vote.create({
+      data: {
+        commentId,
+        userId,
+      },
+    });
+  }
+  if (voteExists && !shouldIncrement) {
+    await prisma.vote.delete({
+      where: {
+        id: voteExists.id,
+      },
+    });
+  }
+
+  const count = await prisma.comment.findFirst({
+    where: { id: commentId },
+    include: {
+      _count: {
+        select: { vote: true },
+      },
+    },
+  });
+
+  return count?._count.vote;
+}
+

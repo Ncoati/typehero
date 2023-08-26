@@ -23,7 +23,8 @@ import {
 import Link from 'next/link';
 import { ShareForm } from '../share-form';
 import { addOrRemoveBookmark } from '../bookmark.action';
-import { incrementOrDecrementUpvote } from '../increment.action';
+import { incrementOrDecrementUpvoteForChallenge } from '../increment.action';
+import { ThumbUpvoteButton } from '../upvote-thumb';
 import { Markdown } from '~/components/ui/markdown';
 import { type ChallengeRouteData } from '~/app/challenge/[id]/getChallengeRouteData';
 import { getRelativeTime } from '~/utils/relativeTime';
@@ -47,9 +48,9 @@ export function Description({ challenge }: Props) {
   const [hasBookmarked, setHasBookmarked] = useState(challenge.bookmark.length > 0);
   const session = useSession();
 
-  const debouncedSearch = useRef(
+  const debouncedUpvote = useRef(
     debounce(async (challengeId: number, userId: string, shouldIncrement: boolean) => {
-      const votes = await incrementOrDecrementUpvote(challengeId, userId, shouldIncrement);
+      const votes = await incrementOrDecrementUpvoteForChallenge(challengeId, userId, shouldIncrement);
       if (votes !== undefined && votes !== null) {
         setVotes(votes);
       }
@@ -163,51 +164,19 @@ export function Description({ challenge }: Props) {
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
-              className="group flex h-6 items-center gap-1 rounded-full bg-zinc-200 pl-[0.675rem] pr-2 text-sm disabled:cursor-not-allowed disabled:bg-zinc-100 dark:bg-zinc-700 disabled:dark:bg-zinc-700/50"
-              disabled={!session.data?.user.id}
-              onClick={() => {
-                let shouldIncrement = false;
-                if (hasVoted) {
-                  setVotes((v) => v - 1);
-                  shouldIncrement = false;
-                  setHasVoted(false);
-                } else {
-                  setVotes((v) => v + 1);
-                  shouldIncrement = true;
-                  setHasVoted(true);
-                }
-                debouncedSearch(challenge.id, session.data?.user.id!, shouldIncrement)?.catch(
+            <ThumbUpvoteButton
+              votes={votes}
+              hasVoted={hasVoted}
+              onClick={(shouldIncrement) => {
+                setHasVoted(shouldIncrement);
+                setVotes((v) => v + (shouldIncrement ? 1 : -1))
+                debouncedUpvote(challenge.id, session.data?.user.id!, shouldIncrement)?.catch(
                   (e) => {
                     console.error(e);
                   },
                 );
               }}
-            >
-              <ThumbsUp
-                className={clsx(
-                  {
-                    'fill-emerald-600 stroke-emerald-600 group-hover:stroke-emerald-600 dark:fill-emerald-400 dark:stroke-emerald-400 group-hover:dark:stroke-emerald-400':
-                      hasVoted,
-                    'stroke-zinc-500 group-hover:stroke-zinc-600 group-disabled:stroke-zinc-300 dark:stroke-zinc-300 group-hover:dark:stroke-zinc-100 group-disabled:dark:stroke-zinc-500/50':
-                      !hasVoted,
-                  },
-                  'h-4 w-4 duration-200',
-                )}
-              />
-              <span
-                className={clsx(
-                  {
-                    'text-emerald-600 dark:text-emerald-400': hasVoted,
-                    'text-zinc-500 group-hover:text-zinc-600 group-disabled:text-zinc-300 dark:text-zinc-300 group-hover:dark:text-zinc-100 group-disabled:dark:text-zinc-500/50':
-                      !hasVoted,
-                  },
-                  'my-auto w-4 self-end duration-300',
-                )}
-              >
-                {votes}
-              </span>
-            </button>
+            />
           </TooltipTrigger>
           <TooltipContent>
             <p>{session.data?.user.id ? 'Upvote' : 'Login to Upvote'}</p>

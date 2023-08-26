@@ -4,6 +4,7 @@ import uuidByString from 'uuid-by-string';
 import { loadChallengesFromTypeChallenge } from '../mocks/challenges.mock';
 import CommentMock from '../mocks/comment.mock';
 import UserMock from '../mocks/user.mock';
+import { VoteMock } from '../mocks/vote.mock';
 
 const prisma = new PrismaClient();
 
@@ -62,6 +63,7 @@ try {
   const comments = Array.from({ length: 50 }, () => CommentMock());
 
   const replies: Prisma.CommentCreateManyInput[] = [];
+  const votes: Prisma.VoteCreateManyInput[] = [];
 
   const { comment: createdComments } = await prisma.challenge.update({
     where: { id: someChallenge?.id },
@@ -77,6 +79,11 @@ try {
 
   for (const comment of createdComments) {
     replies.push(CommentMock(comment.id), CommentMock(comment.id));
+    const voteCount = faker.helpers.rangeToNumber({min:0, max: 3})
+    const voteUsers = faker.helpers.arrayElements(usersToBeMade.map(user => user.id), voteCount);
+    for(let i = 0; i < voteCount; i++) {
+      votes.push(VoteMock(voteUsers[i]||trashId, comment.id))
+    }
   }
 
   await prisma.challenge.update({
@@ -87,6 +94,10 @@ try {
       },
     },
   });
+
+  await prisma.vote.createMany({
+    data: votes
+  })
 
   await prisma.$disconnect();
 } catch (e) {

@@ -120,6 +120,7 @@ export type CommentsByChallengeId = NonNullable<
   Awaited<ReturnType<typeof getCommentsByChallengeId>>
 >;
 export async function getCommentsByChallengeId(id: number) {
+  const session = await getServerAuthSession();
   return await prisma.comment.findMany({
     where: {
       rootType: 'CHALLENGE',
@@ -131,6 +132,12 @@ export async function getCommentsByChallengeId(id: number) {
       _count: {
         select: {
           replies: true,
+          vote: true
+        },
+      },
+      vote: {
+        where: {
+          userId: session?.user.id || '',
         },
       },
     },

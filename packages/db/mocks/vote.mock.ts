@@ -1,8 +1,8 @@
 import { type Prisma } from '@prisma/client';
-import { faker } from '@faker-js/faker';
 
-export function VoteMock(userIds: string[]): Prisma.VoteCreateManyInput {
+export function VoteMock(userId: string, commentId: number): Prisma.VoteCreateManyInput {
   return {
-    userId: faker.helpers.arrayElement(userIds),
+    userId,
+    commentId,
   };
 }

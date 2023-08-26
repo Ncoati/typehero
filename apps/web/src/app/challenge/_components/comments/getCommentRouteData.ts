@@ -1,5 +1,6 @@
 'use server';
 import type { CommentRoot } from '@repo/db/types';
+import { getServerAuthSession } from '@repo/auth/server';
 import { prisma } from '@repo/db';
 
 const PAGESIZE = 10;
@@ -26,6 +27,7 @@ export async function getPaginatedComments({
     },
   });
 
+  const session = await getServerAuthSession();
   const comments = await prisma.comment.findMany({
     skip: (page - 1) * PAGESIZE,
     take: PAGESIZE,
@@ -43,6 +45,12 @@ export async function getPaginatedComments({
       _count: {
         select: {
           replies: true,
+          vote: true,
+        },
+      },
+      vote: {
+        where: {
+          userId: session?.user.id || '',
         },
       },
       rootChallenge: true,
